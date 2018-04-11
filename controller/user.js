@@ -45,5 +45,11 @@ module.exports = {
         message:'用户不存在',
       })
     }
+  },
+  userinfo: async (ctx, next) => {
+    ctx.send({
+      code:'1',
+      message:ctx
+    })
   }
 }

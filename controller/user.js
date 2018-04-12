@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs')
 const secret = require('../config/secret.json')
 const {query} = require('../config/db')
+const jwt = require('jsonwebtoken')
+const util = require('util')
+const verify = util.promisify(jwt.verify)
 module.exports = {
   register: async (ctx, next) => {
     let {username, password} = ctx.request.body
@@ -28,10 +31,17 @@ module.exports = {
     if(result.length>0) {
       let realPwd = result[0]['password']
       if(bcrypt.compareSync(password,realPwd)){
+        /**
+         * jwt生成
+         */
+        let userToken = {
+          username: username
+        }
+        const token = jwt.sign(userToken, secret.sign, {expiresIn:'1h'})
         ctx.send({
           code:'1',
           message:'登录成功',
-          token:new Buffer(username).toString('base64')
+          token:'Bearer '+token
         })
       } else {
         ctx.send({
@@ -46,10 +56,76 @@ module.exports = {
       })
     }
   },
-  userinfo: async (ctx, next) => {
-    ctx.send({
-      code:'1',
-      message:ctx
-    })
+  getUserinfo: async (ctx, next) => {
+    const token = ctx.request.header.authorization
+    if(token){
+      let payload = await verify(token.split(' ')[1], secret.sign)
+      let username = payload.username
+      let result = await query(`SELECT * FROM user WHERE username='${username}'`)
+      if(result.length>0){
+        ctx.send({
+          code:'1',
+          message:result[0]
+        })
+      }
+    } else {
+      ctx.send({
+        code:'-1',
+        message:'认证错误'
+      })
+    }
+  },
+  delUserinfo: async (ctx, next) => {
+    const token = ctx.request.header.authorization
+    if(token){
+      let payload = await verify(token.split(' ')[1], secret.sign)
+      let username = payload.username
+      let result = await query(`SELECT id FROM user WHERE username='${username}'`)
+      if(result.length>0){
+        // 判断不要用户删除自己
+        if(result[0]['id'] !== parseInt(ctx.params.id)){
+          let del = await query(`DELETE FROM user WHERE id=${ctx.params.id}`)
+          if(del.affectedRows===0){
+            ctx.send({
+              code:'1',
+              message: '删除成功'
+            })
+          }
+        } else{
+          ctx.send({
+            code:'-1',
+            message:'大哥请不要删除自己，谢谢合作！'
+          })
+        }
+      } else {
+        ctx.send({
+          code:'-1',
+          message:'无法删除'
+        })
+      }
+    } else {
+      ctx.send({
+        code:'-1',
+        message:'认证错误'
+      })
+    }
+  },
+  putUserInfo: async(ctx, next) => {
+    let {username, email} = ctx.request.body
+    const token = ctx.request.header.authorization
+    if(token) {
+      let playload = await verify(token.split(' ')[1], secret.sign)
+      let realusername = playload.username
+      query(`UPDATE user SET username='${username}',email='${email}' where username='${realusername}'`)
+      ctx.send({
+        code:'1',
+        message:'修改成功'
+      })
+    } else {
+      ctx.send({
+        code:'-1',
+        message: '认证失败'
+      })
+    }
   }
 }

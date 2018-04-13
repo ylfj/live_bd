@@ -81,17 +81,23 @@ module.exports = {
     if(token){
       let payload = await verify(token.split(' ')[1], secret.sign)
       let username = payload.username
-      let result = await query(`SELECT id,livecode FROM user WHERE username='${username}'`)
+      let result = await query(`SELECT id FROM user WHERE username='${username}'`)
       if(result.length>0){
         // 判断不要用户删除自己
         if(result[0]['id'] !== parseInt(ctx.params.id)){
+          // 先删直播间
+          await query(`DELETE FROM live WHERE livecode=(SELECT livecode FROM user WHERE id=${parseInt(ctx.params.id)})`)
+          // 再删人
           let del = await query(`DELETE FROM user WHERE id=${ctx.params.id}`)
-          if(del.affectedRows===1){
-            // 同时删除直播间
-            await query(`DELETE FROM live WHERE livecode='${result[0]["livecode"]}'`)
+          if(del.affectedRows>0){
             ctx.send({
               code:'1',
               message: '删除成功'
+            })
+          } else {
+            ctx.send({
+              code:'-1',
+              message:'无法删除'
             })
           }
         } else{

@@ -1,11 +1,14 @@
-const path = require('path')
+// post等请求body内数据解析
 const bodyParser = require('koa-bodyparser')
+// 静态文件
+const path = require('path')
 const staticFiles = require('koa-static')
-//jwt相关
+// jwt相关
 const jwtKoa = require('koa-jwt')
 const secret = require('../config/secret.json')
-
+// 响应数据的格式化
 const miSend = require('./mi-send')
+// 日志
 const miLog = require('./mi-log')
 module.exports = (app) => {
   app

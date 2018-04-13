@@ -14,6 +14,7 @@ module.exports = {
       password = hash
 
       await query(`INSERT INTO user (username, password, livecode) VALUES ('${username}', '${password}','${username}')`)
+      await query(`INSERT INTO live (roomname, gift, peonum, livecode, usecustom, active) VALUES ('${username}',0,0,'${username}',0,0)`)
       ctx.send({
         code:'1',
         message:'注册成功'
@@ -80,12 +81,14 @@ module.exports = {
     if(token){
       let payload = await verify(token.split(' ')[1], secret.sign)
       let username = payload.username
-      let result = await query(`SELECT id FROM user WHERE username='${username}'`)
+      let result = await query(`SELECT id,livecode FROM user WHERE username='${username}'`)
       if(result.length>0){
         // 判断不要用户删除自己
         if(result[0]['id'] !== parseInt(ctx.params.id)){
           let del = await query(`DELETE FROM user WHERE id=${ctx.params.id}`)
-          if(del.affectedRows===0){
+          if(del.affectedRows===1){
+            // 同时删除直播间
+            await query(`DELETE FROM live WHERE livecode='${result[0]["livecode"]}'`)
             ctx.send({
               code:'1',
               message: '删除成功'

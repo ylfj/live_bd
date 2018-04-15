@@ -11,6 +11,9 @@ module.exports = (app) => {
   // 直播间相关
   router.put('/activelive', LiveController.activeLive)   // 激活直播间
   router.get('/activelive', LiveController.ifActiveLive) // 获取激活状态
+  router.get('/live', LiveController.getAllLive)         // 获取全部直播间
+  router.put('/live', LiveController.updateLiveInfo)     // 更新直播间信息
+  router.put('/gift/:livecode', LiveController.addGift)            // 礼品赠送
   app.use(router.routes())
     .use(router.allowedMethods())
 }

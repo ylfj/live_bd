@@ -7,14 +7,14 @@ const verify = util.promisify(jwt.verify)
 module.exports = {
   register: async (ctx, next) => {
     let {username, password} = ctx.request.body
-    let notHave =await query(`SELECT * FROM user where username='${username}'`)
-    if( notHave.length <= 0){
-      const salt = bcrypt.genSaltSync()
+    let notHave =await query(`SELECT * FROM user where username='${username}'`) // 判断是否有重复的用户
+    if( notHave.length <= 0){//如果没有
+      const salt = bcrypt.genSaltSync() 
       const hash = bcrypt.hashSync(password, salt)
-      password = hash
+      password = hash //对密码进行加密
 
-      await query(`INSERT INTO user (username, password, livecode) VALUES ('${username}', '${password}','${username}')`)
-      await query(`INSERT INTO live (roomname, gift, peonum, livecode, usecustom, active) VALUES ('${username}',0,0,'${username}',0,0)`)
+      await query(`INSERT INTO user (username, password, livecode) VALUES ('${username}', '${password}','${username}')`) // 将用户传入数据库
+      await query(`INSERT INTO live (roomname, gift, peonum, livecode, usecustom, active) VALUES ('${username}',0,0,'${username}',0,0)`) // 初始化直播间
       ctx.send({
         code:'1',
         message:'注册成功'
@@ -28,17 +28,17 @@ module.exports = {
   },
   login: async (ctx, next) => {
     let {username, password} = ctx.request.body
-    let result = await query(`SELECT password  FROM user where username='${username}'`)
-    if(result.length>0) {
-      let realPwd = result[0]['password']
-      if(bcrypt.compareSync(password,realPwd)){
+    let result = await query(`SELECT password  FROM user where username='${username}'`) // 查询登陆用户的密码
+    if(result.length>0) { // 如果存在，则确定用户存在
+      let realPwd = result[0]['password'] //将查询到的密码放入变量
+      if(bcrypt.compareSync(password,realPwd)){//比对传入的代码和查询到的代码
         /**
          * jwt生成
          */
         let userToken = {
           username: username
         }
-        const token = jwt.sign(userToken, secret.sign, {expiresIn:'1h'})
+        const token = jwt.sign(userToken, secret.sign, {expiresIn:'1h'}) // 如果正确 则生成jwt token，用于用户检测
         ctx.send({
           code:'1',
           message:'登录成功',
@@ -60,9 +60,9 @@ module.exports = {
   getUserinfo: async (ctx, next) => {
     const token = ctx.request.header.authorization
     if(token){
-      let payload = await verify(token.split(' ')[1], secret.sign)
-      let username = payload.username
-      let result = await query(`SELECT * FROM user WHERE username='${username}'`)
+      let payload = await verify(token.split(' ')[1], secret.sign) // 解密jwt token
+      let username = payload.username // 从解密后的信息中获取username
+      let result = await query(`SELECT * FROM user WHERE username='${username}'`) // 查询用户的所有信息
       if(result.length>0){
         ctx.send({
           code:'1',
